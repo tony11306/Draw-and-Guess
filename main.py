@@ -178,7 +178,7 @@ class GameGrid(GridLayout):
             super().__init__(**kwargs)
 
             with self.canvas.before:
-                Color(0, 0.5, 1, 1)
+                Color(0, 0.5, 1, 0.7)
                 self.rect = self.rect = RoundedRectangle(size=self.size, pos=self.pos, radius=[(5, 5), (5, 5), (5, 5), (5, 5)])
             self.bind(size=self._update_rect, pos=self._update_rect)
             self.user_list = []
@@ -350,12 +350,15 @@ class GameGrid(GridLayout):
                 def __init__(self, **kwargs):
                     super(GameGrid.Drawing.Board.FinishedScreen, self).__init__(**kwargs)
                     self.orientation = 'horizontal'
-                    self.first_player_name = Label(text='', font_size=20, height=40, font_name='msjh.ttc', color=[1, 1, 0, 1])
-                    # make label background circle
-                    
+                    self.first_player_name = Label(text='', font_size=50, height=40, font_name='msjh.ttc', color=[0.73, 0.57, 0, 1])
+                    self.second_player_name = Label(text='', font_size=40, height=40, font_name='msjh.ttc', color=[0.45, 0.45, 0.43, 1])
+                    self.third_player_name = Label(text='', font_size=30, height=40, font_name='msjh.ttc', color=[0.7, 0.36, 0.09, 1])
 
-                    self.second_player_name = Label(text='', font_size=20, height=40, font_name='msjh.ttc', color=[0.45, 0.45, 0.43, 1])
-                    self.third_player_name = Label(text='', font_size=20, height=40, font_name='msjh.ttc', color=[0.7, 0.36, 0.09, 1])
+                    # set background color to gray
+                    with self.canvas.before:
+                        Color(0.7, 0.7, 0.7, 1)
+                        self.rect = Rectangle(size=self.size, pos=self.pos)
+                    self.bind(size=self._update_rect, pos=self._update_rect)
                     
                     self.add_widget(self.second_player_name)
                     self.add_widget(self.first_player_name)
@@ -366,12 +369,16 @@ class GameGrid(GridLayout):
                     self.second_player_name.text = ''
                     self.third_player_name.text = ''
                     try:
-                        self.first_player_name.text = '第一名:\n'+ players[0][0]
+                        self.first_player_name.text = '第一名\n'+ players[0][0]
                         self.second_player_name.text = '第二名\n'+ players[1][0]
                         self.third_player_name.text = '第三名\n' + players[2][0]
                         
                     except Exception as e:
                         print(e)
+                
+                def _update_rect(self, instance, value):
+                    self.rect.size = instance.size
+                    self.rect.pos = instance.pos
 
 
             class LobbyScreen(BoxLayout):
@@ -563,8 +570,8 @@ class GameGrid(GridLayout):
     def __init__(self, **kwargs):
         super(GameGrid, self).__init__(**kwargs)
         with self.canvas.before:
-            Color(0.2, 0.6, 1, 1)
-            self.rect = Rectangle(size=self.size, pos=self.pos)
+            #Color(0.2, 0.6, 1, 1)
+            self.rect = Rectangle(size=self.size, pos=self.pos, source='imgs/gameBackground.png')
 
         self.bind(size=self._update_rect, pos=self._update_rect)
         self.main_layout = GridLayout(cols=2, spacing=20)
@@ -595,8 +602,8 @@ class LoginMenu(GridLayout):
     def __init__(self, **kwargs):
         super(LoginMenu, self).__init__(**kwargs)
         with self.canvas.before:
-            Color(0.2, 0.6, 1, 1)
-            self.rect = RoundedRectangle(size=self.size, pos=self.pos)
+            #Color(0.2, 0.6, 1, 0)
+            self.rect = RoundedRectangle(size=self.size, pos=self.pos, source='imgs/background.png')
         self.bind(size=self._update_rect, pos=self._update_rect)
 
         self.rows = 3
