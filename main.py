@@ -1,6 +1,10 @@
 from concurrent.futures import thread
 import struct
 import time
+from kivy.config import Config
+Config.set('graphics', 'resizable', False)
+Config.set('input', 'mouse', 'mouse,multitouch_on_demand')
+
 from kivy.app import App
 from kivy.uix.label import Label
 from kivy.uix.gridlayout import GridLayout
@@ -11,16 +15,18 @@ from kivy.graphics import Color, Rectangle, RoundedRectangle, Ellipse, Line
 from kivy.core.window import Window
 from kivy.uix.button import Button
 from kivy.uix.slider import Slider
-from kivy.config import Config
 from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.core.audio import SoundLoader
 from kivy.uix.progressbar import ProgressBar
+from kivy.uix.scatterlayout import ScatterLayout
 
 import socket
 import pickle
 import threading
 
 from MySocket import MySocket, SocketData
+
+
 '''
 class SoundEffect:
 
@@ -48,6 +54,33 @@ class SoundEffect:
         SoundEffect._button_sound_1.play()
         SoundEffect._message_sound.seek(0)
 '''
+
+class MouseCursor(ScatterLayout):
+    cursor_size = (60, 60)
+    def __init__(self) -> None:
+        super().__init__()
+        # draw a circle
+        with self.canvas:
+            Color(0.3, 0.3, 0.3, 0.7)
+            self.size_hint = (None, None)
+            self.rect = Ellipse(size=MouseCursor.cursor_size, pos=self.pos)
+        self.bind(pos=self.update_rect)
+        self.size_hint = (None, None)
+        Window.bind(mouse_pos=self.on_mouse_pos)
+    
+    def on_mouse_pos(self, *args):
+        if self.rect.size != MouseCursor.cursor_size:
+            self.rect.size = MouseCursor.cursor_size
+        self.rect.pos = (args[1][0] - MouseCursor.cursor_size[0] / 2, args[1][1] - MouseCursor.cursor_size[1] / 2)
+
+    
+    def on_touch_down(self, touch):
+        pass
+    
+    def update_rect(self, *args):
+        self.rect.pos = self.pos
+        self.rect.size = self.size
+        
 
 client_socket = None
 
@@ -285,7 +318,8 @@ class GameGrid(GridLayout):
                 
                 def set_thickness(*args):
                     GameGrid.Drawing.thickness = self.slider.value
-                    self.slider.cursor_size = (GameGrid.Drawing.thickness*9, GameGrid.Drawing.thickness*9)
+                    self.slider.cursor_size = (GameGrid.Drawing.thickness*5, GameGrid.Drawing.thickness*5)
+                    MouseCursor.cursor_size = (GameGrid.Drawing.thickness*5, GameGrid.Drawing.thickness*5)
 
                 self.plate_grid = GridLayout(rows=9, cols=2, spacing=5, padding=20)
                 for i in range(len(colors)):
@@ -295,7 +329,7 @@ class GameGrid(GridLayout):
 
                 self.tool_grid = BoxLayout(orientation='horizontal', spacing=5)
                 self.slider = Slider(min=0.5, max=5, value=1, orientation='vertical', step=0.5, value_track=True, value_track_color=[0.5, 0.5, 0.5, 1])
-                self.slider.cursor_size = (GameGrid.Drawing.thickness*9, GameGrid.Drawing.thickness*9)
+                self.slider.cursor_size = (GameGrid.Drawing.thickness*5, GameGrid.Drawing.thickness*5)
                 # self.slider.background_width = 100
                 self.slider.bind(value=set_thickness)
                 self.eraser_button = Button(text='', size_hint=(None, None), height=24, width=24, background_normal='imgs/eraser.png', background_color=(1,1,1))
@@ -487,7 +521,8 @@ class GameGrid(GridLayout):
                         self.server_line = Line(points=(data.x + self.x, data.y + self.y))
                         self.server_line.width = data.thickness * 1.5
                 elif data.data_type == 'draw':
-                    self.server_line.points += (self.x + data.x, self.y + data.y)
+                    if self.server_line is not None:
+                        self.server_line.points += (self.x + data.x, self.y + data.y)
 
             def on_touch_move(self, touch):
                 if self.collide_point(touch.x, touch.y):
@@ -567,7 +602,7 @@ class LoginMenu(GridLayout):
         self.rows = 3
         self.spacing = 100
         self.padding = 100
-        self.title = Label(text='你畫我猜 Guess and Draw!', font_size=50, font_name='msjh.ttc', color=(1, 1, 1, 1))
+        self.title = Label(text='你畫我猜 Draw and Guess!', font_size=50, font_name='msjh.ttc', color=(1, 1, 1, 1))
         self.ip_port_and_user_name_grid = GridLayout(cols=2, spacing=10)
         self.user_name_input = TextInput(hint_text='玩家名稱', font_name='msjh.ttc', multiline=False, font_size=20)
         self.ip_port_text_input = TextInput(hint_text='輸入格式: "IP:PORT"', font_name='msjh.ttc', multiline=False, font_size=20)
@@ -633,18 +668,24 @@ class MyApp(App):
 
     def build(self):
         # set window size to 1080x720
+        self.title = '你畫我猜 Draw and Guess!'
         self.screen_manager = ScreenManager()
         self.menu_screen = Screen(name='menu')
         self.game_screen = Screen(name='game')
+        self.cursor = MouseCursor()
+        self.cursor.auto_bring_to_front = True
 
         self.game_grid = GameGrid()
         self.login_menu = LoginMenu()
 
         self.menu_screen.add_widget(self.login_menu)
         self.game_screen.add_widget(self.game_grid)
+        self.game_screen.add_widget(self.cursor)
 
         self.screen_manager.add_widget(self.menu_screen)
         self.screen_manager.add_widget(self.game_screen)
+        
+
         return self.screen_manager
     
 
@@ -700,8 +741,10 @@ def recv_from_server(app: MyApp):
 
 
 if __name__ == '__main__':
+    
     Window.size = (1200, 720)
-    Config.set('input', 'mouse', 'mouse,multitouch_on_demand')
+    MouseCursor.cursor_size = (GameGrid.Drawing.thickness * 5, GameGrid.Drawing.thickness * 5)
+    Window.set_system_cursor('crosshair')
     #SoundEffect.init()
     user_id = None
     app = MyApp()
