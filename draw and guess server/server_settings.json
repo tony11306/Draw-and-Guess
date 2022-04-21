@@ -1,8 +1,8 @@
 {
-    "minimum-players-to-start": 1,
+    "minimum-players-to-start": 2,
     "drawing-time": 90,
     "selecting-options-time": 30,
-    "winning-score": 0,
+    "winning-score": 120,
     "show-finished-time": 30,
     "show-answer-time": 8,
     "server-port": 1234,

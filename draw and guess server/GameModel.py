@@ -11,10 +11,6 @@ with open('questions.txt', 'r', encoding='utf-8') as f:
     for line in f:
         questions.append(line.strip())
 
-with open('questions.txt', 'w', encoding='utf-8') as f:
-    random.shuffle(questions)
-    for question in questions:
-        f.write(question + '\n')
 class Player:
     def __init__(self, addr, conn, name, user_id):
         self._addr = addr
@@ -77,6 +73,8 @@ class GameModel:
         self.players = {} # dict of (addr, client: MySocket)
         self.players_lock = threading.Lock()
         self.id_generator_lock = threading.Lock()
+        self.questions = []
+        self.draw_history = []
         self.state = 'waiting_to_start' # waiting, selecting_options, drawing, waiting_to_start, answer
         self.state_lock = threading.Lock()
         self.current_turn_player = None
@@ -100,9 +98,10 @@ class GameModel:
             try:
                 time.sleep(0.5)
                 self.set_timer(self.timer - 0.5)
-
                 with self.state_lock:
                     if self.state == 'waiting_to_start':
+                        self.questions = questions.copy()
+                        random.shuffle(self.questions)
                         if len(self.players) >= GameModel.minimum_players_to_start:
                             self.state = 'selecting_options'
                             self.update_current_player()
@@ -174,6 +173,9 @@ class GameModel:
                             else:
                                 self.state = 'selecting_options'
                     elif self.state == 'finished':
+                        if len(self.players) == 0:
+                            self.state = 'waiting_to_start'
+                            continue
                         if self.timer > 0:
                             continue
                         self.state = 'waiting_to_start'
@@ -188,7 +190,10 @@ class GameModel:
         with self.players_lock:
             if len(self.players) == 0:
                 return
-            self.current_question = random.choice(questions)
+            if len(self.questions) == 0:
+                self.questions = questions.copy()
+                random.shuffle(self.questions)
+            self.current_question = self.questions.pop()
             players = []
 
             for player in self.players.values():
@@ -213,6 +218,8 @@ class GameModel:
                 self.players[addr].conn.sendall(SocketData(data_type='set_time', time=self.timer))
                 join_message = SocketData(data_type='message', message=f'{self.players[addr].name} 加入了遊戲.')
                 self.broadcast(join_message)
+                for draw_history in self.draw_history:
+                    self.players[addr].conn.sendall(draw_history)
             elif data.data_type == 'message':
                 if self.state == 'drawing':
                     if self.players[addr] == self.current_turn_player:
@@ -237,9 +244,9 @@ class GameModel:
                     return
                 if self.current_turn_player and self.current_turn_player.addr != addr:
                     return
+                self.draw_history.append(data)
                 self.broadcast(data)
             elif data.data_type == 'skip':
-                print(self.current_turn_player)
                 if self.state == 'selecting_options' and self.current_turn_player == self.players[addr]:
                     self.set_timer(0)
             elif data.data_type == 'accept':
