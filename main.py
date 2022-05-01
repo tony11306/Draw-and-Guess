@@ -1,5 +1,3 @@
-from concurrent.futures import thread
-import struct
 import time
 from kivy.config import Config
 Config.set('graphics', 'resizable', False)
@@ -20,18 +18,20 @@ from kivy.core.audio import SoundLoader
 from kivy.uix.progressbar import ProgressBar
 from kivy.uix.scatterlayout import ScatterLayout
 
-import socket
 import pickle
 import threading
 
 from MySocket import MySocket, SocketData
 
 
-'''
+
 class SoundEffect:
 
     _message_sound = SoundLoader.load('./sound/messageSound.wav')
     _button_sound_1 = SoundLoader.load('./sound/buttonSound1.wav')
+    _correct_sound = SoundLoader.load('./sound/correct.wav')
+    _select_sound = SoundLoader.load('./sound/select.wav')
+    _answer_sound = SoundLoader.load('./sound/answer.wav')
     def __init__(self, filename):
         pass
     
@@ -43,6 +43,15 @@ class SoundEffect:
         SoundEffect._button_sound_1.loop = False
         SoundEffect._button_sound_1.volume = 1
         SoundEffect._button_sound_1.seek(0)
+        SoundEffect._correct_sound.loop = False
+        SoundEffect._correct_sound.volume = 1
+        SoundEffect._correct_sound.seek(0)
+        SoundEffect._select_sound.loop = False
+        SoundEffect._select_sound.volume = 1
+        SoundEffect._select_sound.seek(0)
+        SoundEffect._answer_sound.loop = False
+        SoundEffect._answer_sound.volume = 1
+        SoundEffect._answer_sound.seek(0)
 
     @staticmethod
     def play_message_sound():
@@ -53,7 +62,22 @@ class SoundEffect:
     def play_button_sound_1():
         SoundEffect._button_sound_1.play()
         SoundEffect._message_sound.seek(0)
-'''
+    
+    @staticmethod
+    def play_correct_sound():
+        SoundEffect._correct_sound.play()
+        SoundEffect._correct_sound.seek(0)
+
+    @staticmethod
+    def play_select_sound():
+        SoundEffect._select_sound.play()
+        SoundEffect._select_sound.seek(0)
+    
+    @staticmethod
+    def play_answer_sound():
+        SoundEffect._answer_sound.play()
+        SoundEffect._answer_sound.seek(0)
+
 
 class MouseCursor(ScatterLayout):
     cursor_size = (60, 60)
@@ -611,7 +635,7 @@ class LoginMenu(GridLayout):
         self.padding = 100
         self.title = Label(text='你畫我猜 Draw and Guess!', font_size=50, font_name='msjh.ttc', color=(1, 1, 1, 1))
         self.ip_port_and_user_name_grid = GridLayout(cols=2, spacing=10)
-        self.user_name_input = TextInput(hint_text='玩家名稱', font_name='msjh.ttc', multiline=False, font_size=20)
+        self.user_name_input = TextInput(hint_text='玩家名稱', font_name='msjh.ttc', multiline=False, font_size=20, text_validate_unfocus=False)
         self.ip_port_text_input = TextInput(hint_text='輸入格式: "IP:PORT"', font_name='msjh.ttc', multiline=False, font_size=20)
         self.login_button = Button(text='連線至伺服器', font_name='msjh.ttc', font_size=20)
         self.title.size_hint_y = 0.6
@@ -637,7 +661,7 @@ class LoginMenu(GridLayout):
         self.rect.size = instance.size
     
     def on_login_button_release(self, instance):
-        #SoundEffect.play_button_sound_1()
+        SoundEffect.play_button_sound_1()
         if self.ip_port_text_input.text == '' or self.user_name_input.text == '':
             return
         # check input format
@@ -674,7 +698,6 @@ class LoginMenu(GridLayout):
 class MyApp(App):
 
     def build(self):
-        # set window size to 1080x720
         self.title = '你畫我猜 Draw and Guess!'
         self.screen_manager = ScreenManager()
         self.menu_screen = Screen(name='menu')
@@ -706,13 +729,16 @@ def recv_from_server(app: MyApp):
                 elif data.data_type == 'user_list':
                     app.game_grid.user_list.set_user_list(data.user_list)
                 elif data.data_type == 'message':
-                    #SoundEffect.play_message_sound()
+                    SoundEffect.play_message_sound()
+                    if data.message.startswith('正確答案為'):
+                        SoundEffect.play_correct_sound()
                     app.game_grid.drawing_and_chat.chat.add_message(data.message)
                 elif data.data_type == 'waiting_to_start':
                     app.game_grid.drawing_and_chat.drawing.board.switch_to_lobby_screen()
                     #app.game_grid.drawing_and_chat.set_timer(0)
                 elif data.data_type == 'selecting_options':
                     if data.user_id == user_id:
+                        SoundEffect.play_select_sound()
                         app.game_grid.drawing_and_chat.drawing.board.switch_to_draw_choice_screen(data.question)
                         #app.game_grid.drawing_and_chat.set_timer(10)
                     else:
@@ -720,6 +746,7 @@ def recv_from_server(app: MyApp):
                         app.game_grid.drawing_and_chat.drawing.board.switch_to_waiting_screen()
                         #app.game_grid.drawing_and_chat.set_timer(10)
                 elif data.data_type == 'answer':
+                    SoundEffect.play_answer_sound()
                     app.game_grid.drawing_and_chat.drawing.board.switch_to_answer_screen(data.question)
                     #app.game_grid.drawing_and_chat.set_timer(3)
                 elif data.data_type == 'waiting':
@@ -748,11 +775,10 @@ def recv_from_server(app: MyApp):
 
 
 if __name__ == '__main__':
-    
     Window.size = (1200, 720)
     MouseCursor.cursor_size = (GameGrid.Drawing.thickness * 5, GameGrid.Drawing.thickness * 5)
     Window.set_system_cursor('crosshair')
-    #SoundEffect.init()
+    SoundEffect.init()
     user_id = None
     app = MyApp()
     app.run()

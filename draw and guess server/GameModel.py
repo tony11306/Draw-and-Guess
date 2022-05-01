@@ -100,9 +100,10 @@ class GameModel:
                 self.set_timer(self.timer - 0.5)
                 with self.state_lock:
                     if self.state == 'waiting_to_start':
-                        self.questions = questions.copy()
-                        random.shuffle(self.questions)
+                        self.draw_history = []
                         if len(self.players) >= GameModel.minimum_players_to_start:
+                            self.questions = questions.copy()
+                            random.shuffle(self.questions)
                             self.state = 'selecting_options'
                             self.update_current_player()
                             data = SocketData(
@@ -116,6 +117,7 @@ class GameModel:
                             self.broadcast(SocketData(data_type='set_time', time=self.timer))
                             self.broadcast(data)
                     elif self.state == 'selecting_options':
+                        self.draw_history = []
                         if len(self.players) < GameModel.minimum_players_to_start:
                             self.state = 'waiting_to_start'
                             self.set_timer(0)
@@ -173,6 +175,7 @@ class GameModel:
                             else:
                                 self.state = 'selecting_options'
                     elif self.state == 'finished':
+                        self.draw_history = []
                         if len(self.players) == 0:
                             self.state = 'waiting_to_start'
                             continue
