@@ -104,6 +104,7 @@ class GameModel:
                         if len(self.players) >= GameModel.minimum_players_to_start:
                             self.questions = questions.copy()
                             random.shuffle(self.questions)
+                            self.score_plus = 9
                             self.state = 'selecting_options'
                             self.update_current_player()
                             data = SocketData(

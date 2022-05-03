@@ -2,6 +2,7 @@ import time
 from kivy.config import Config
 Config.set('graphics', 'resizable', False)
 Config.set('input', 'mouse', 'mouse,multitouch_on_demand')
+Config.set('kivy', 'exit_on_escape', '0')
 
 from kivy.app import App
 from kivy.uix.label import Label
